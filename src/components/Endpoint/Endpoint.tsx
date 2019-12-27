@@ -1,19 +1,13 @@
 import * as React from 'react';
-import { ShelfIcon } from '../../common-elements';
+import { SampleControls } from '../../common-elements';
 import { OperationModel } from '../../services';
-import { Markdown } from '../Markdown/Markdown';
+import styled from '../../styled-components';
 import { OptionsContext } from '../OptionsProvider';
-import { SelectOnClick } from '../SelectOnClick/SelectOnClick';
-
-import { expandDefaultServerVariables, getBasePath } from '../../utils';
 import {
   EndpointInfo,
   HttpVerb,
   OperationEndpointWrap,
-  ServerItem,
   ServerRelativeURL,
-  ServersOverlay,
-  ServerUrl,
 } from './styled.elements';
 
 export interface EndpointProps {
@@ -27,6 +21,12 @@ export interface EndpointState {
   expanded: boolean;
 }
 
+const TryItWrap = styled.div`
+  &:hover > ${SampleControls} {
+    opacity: 1;
+  }
+`;
+
 export class Endpoint extends React.Component<EndpointProps, EndpointState> {
   constructor(props) {
     super(props);
@@ -39,48 +39,28 @@ export class Endpoint extends React.Component<EndpointProps, EndpointState> {
     this.setState({ expanded: !this.state.expanded });
   };
 
+  tryItOut = () => {
+    const { operation } = this.props;
+    window.open('http://dev.parley.nu/clientApi/latest/doc/custom/api-explorer?scrollTo=page-' + operation.operationId, '_blank');
+  };
+
   render() {
-    const { operation, inverted, hideHostname } = this.props;
-    const { expanded } = this.state;
+    const { operation } = this.props;
 
     // TODO: highlight server variables, e.g. https://{user}.test.com
     return (
       <OptionsContext.Consumer>
         {options => (
           <OperationEndpointWrap>
-            <EndpointInfo onClick={this.toggle} expanded={expanded} inverted={inverted}>
+            <EndpointInfo>
               <HttpVerb type={operation.httpVerb}> {operation.httpVerb}</HttpVerb>{' '}
               <ServerRelativeURL>{operation.path}</ServerRelativeURL>
-              <ShelfIcon
-                float={'right'}
-                color={inverted ? 'black' : 'white'}
-                size={'20px'}
-                direction={expanded ? 'up' : 'down'}
-                style={{ marginRight: '-25px' }}
-              />
+              <TryItWrap>
+                <SampleControls>
+                  <span onClick={this.tryItOut}> Try it out </span>
+                </SampleControls>
+              </TryItWrap>
             </EndpointInfo>
-            <ServersOverlay expanded={expanded}>
-              {operation.servers.map(server => {
-                const normalizedUrl = options.expandDefaultServerVariables
-                  ? expandDefaultServerVariables(server.url, server.variables)
-                  : server.url;
-                return (
-                  <ServerItem key={normalizedUrl}>
-                    <Markdown source={server.description || ''} compact={true} />
-                    <SelectOnClick>
-                      <ServerUrl>
-                        <span>
-                          {hideHostname || options.hideHostname
-                            ? getBasePath(normalizedUrl)
-                            : normalizedUrl}
-                        </span>
-                        {operation.path}
-                      </ServerUrl>
-                    </SelectOnClick>
-                  </ServerItem>
-                );
-              })}
-            </ServersOverlay>
           </OperationEndpointWrap>
         )}
       </OptionsContext.Consumer>

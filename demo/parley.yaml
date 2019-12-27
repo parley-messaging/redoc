@@ -1,0 +1,1891 @@
+openapi: 3.0.0
+servers:
+  - url: 'https://api.parley.nu/clientApi/v1.2'
+    description: Production server
+info:
+  title: Parley client Api documentation
+  version: 1.2.0
+  description: 'By using this API you agree to the <a href=''https://api.parley.nu/Parley_Terms_and_Conditions_API.pdf''>Parley Terms and Conditions</a>.<br> Use this API to create a client application for your Parley solution. The Parley iOS, Android and web libraries use this API. To integrate the Parley Api with your service application use our <a href=''https://api.parley.nu/serviceApi/v1.0''>Service Api</a>.'
+  contact:
+    name: API Support
+    url: 'https://developers.parley.nu'
+    email: support@parley.nu
+tags:
+  - name: Config
+  - name: Devices
+  - name: Events
+  - name: Messages
+paths:
+  '/messages/{id}':
+    get:
+      tags:
+        - Messages
+      summary: Single message
+      description: Retrieve a message for a particular user by the message ID.
+      operationId: GetMessagesById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 'The identifier of the message you want '
+          schema:
+            type: integer
+      security:
+        - x-iris-identification: []
+        - x-iris-identification: []
+          authorization: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GetMessageResult/allOf/0/properties/data'
+                        x-miro: doc/components/schemas/Message.yaml
+                    required:
+                      - data
+                  - $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                    x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                success:
+                  summary: success
+                  value:
+                    data:
+                      id: 10737
+                      time: 1536739259
+                      message: hi!
+                      image: null
+                      typeId: 2
+                      agent:
+                        id: '1'
+                        name: John Doe
+                        avatar: 'https://beta.tracebuzz.com//V002//img//avatar.php?i=JD&c=ff0000'
+                    notifications: []
+                    status: SUCCESS
+                    metadata:
+                      values:
+                        url: messages/10737
+                      method: get
+                      duration: 0
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                authentication_required:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_required'
+                  x-miro: doc/components/examples/errors/authorization/authentication_required.yaml
+                authentication_not_valid:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_not_valid'
+                  x-miro: doc/components/examples/errors/authorization/authentication_not_valid.yaml
+                authentication_expired:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_expired'
+                  x-miro: doc/components/examples/errors/authorization/authentication_expired.yaml
+                error:
+                  summary: message_not_found
+                  description: The message with specified id doesn't exist.
+                  value:
+                    notifications:
+                      - type: error
+                        message: message_not_found
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: messages/999
+                      method: get
+                      duration: 0.01
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  $ref: '#/paths/~1config/get/responses/401/content/application~1json/examples/error'
+                  x-miro: doc/components/examples/errors/authorization/x-iris-identification.yaml
+  /messages:
+    get:
+      tags:
+        - Messages
+      summary: Latest messages
+      description: |-
+        Get the latest 50 messages from and to a particular user.<br /> The order is by time and descending (from new to old)<br /> <br /> The user is defined by one of the following authentication combinations:<br /> <ul>
+          <li>- x-iris-identification (unregistered user)</li>
+          <li>- x-iris-identification + authorization (registered user)</li>
+          <b>Note: authentication with only an 'authorization' header is not allowed.</b>
+        </ul>
+      operationId: GetMessages
+      security:
+        - x-iris-identification: []
+        - x-iris-identification: []
+          authorization: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        description: The messages for this user
+                        items:
+                          $ref: '#/components/schemas/GetMessageResult/allOf/0/properties/data'
+                          x-miro: doc/components/schemas/Message.yaml
+                    required:
+                      - data
+                  - type: object
+                    properties:
+                      agent:
+                        allOf:
+                          - type: object
+                            description: Object that contains information about the agent that is currently handling the conversation
+                            properties:
+                              isTyping:
+                                type: integer
+                                description: 'Timestamp when the agent started typing or 0 if he is not typing '
+                            required:
+                              - isTyping
+                          - $ref: '#/components/schemas/Message/properties/agent'
+                            x-miro: doc/components/schemas/Agent.yaml
+                    required:
+                      - agent
+                  - type: object
+                    properties:
+                      paging:
+                        type: object
+                        description: A helper to let you determine which paging endpoint to use to 'walk through' all the messages of this user
+                        properties:
+                          before:
+                            type: string
+                            description: 'The endpoint you need to call to get the previous 50 messages. '
+                          after:
+                            type: string
+                            description: The endpoint to call if you want to poll for newer messages since this call
+                        required:
+                          - before
+                          - after
+                    required:
+                      - paging
+                  - type: object
+                    properties:
+                      stickyMessage:
+                        type: string
+                        description: 'Contains a Crisis message or OutOfOffice message, if set. Only contains 1 message. The language of the message is automatically chosen by the ''HTTP_ACCEPT_LANGUAGE'' header, if that language is supported. If it is not supported we default to the english language for the message.'
+                    required:
+                      - stickyMessage
+                  - type: object
+                    properties:
+                      welcomeMessage:
+                        type: string
+                        description: Contains a welcome message that the client will see at the top of the conversation. (also known as `infoText`)
+                    required:
+                      - welcomeMessage
+                  - $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                    x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                success:
+                  summary: messages_returned
+                  value:
+                    data:
+                      - id: 10737
+                        time: 1536739259
+                        message: hi!
+                        image: null
+                        typeId: 2
+                        agent:
+                          id: '2'
+                          name: Gerben
+                          avatar: 'https://beta.tracebuzz.com/images/avatars/1912991618/6033.jpg'
+                      - id: 10736
+                        time: 1536739157
+                        message: 'Hello, i have a question'
+                        image: null
+                        typeId: 1
+                        agent: null
+                    agent:
+                      id: '2'
+                      name: Gerben
+                      avatar: 'https://beta.tracebuzz.com/images/avatars/1912991618/6033.jpg'
+                      isTyping: 0
+                    paging:
+                      before: ''
+                      after: '/messages/after:10737'
+                    notifications: []
+                    status: SUCCESS
+                    metadata:
+                      values:
+                        url: messages
+                      method: get
+                      duration: 0.01
+                    stickyMessage: 'Sorry we are closed right know. We will be open next day from 09:00 - 17:55'
+                    welcomeMessage: 'Welcome to our support chat, you can expect a response in ~1 minute.'
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                authentication_required:
+                  summary: authentication_required
+                  value:
+                    notifications:
+                      - type: error
+                        message: authentication_required
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: devices
+                      method: post
+                      duration: 0.01
+                authentication_not_valid:
+                  summary: authentication_not_valid
+                  value:
+                    notifications:
+                      - type: error
+                        message: authentication_not_valid
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: devices
+                      method: post
+                      duration: 0.01
+                authentication_expired:
+                  summary: authentication_expired
+                  value:
+                    notifications:
+                      - type: error
+                        message: authentication_expired
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: devices
+                      method: post
+                      duration: 0.01
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  $ref: '#/paths/~1config/get/responses/401/content/application~1json/examples/error'
+                  x-miro: doc/components/examples/errors/authorization/x-iris-identification.yaml
+    post:
+      tags:
+        - Messages
+      summary: Send message
+      description: Post a message to the API where the 'sender' is a particular user.<br><br> **Important**<br> You can choose to send a text message or an message with an image. For the textual message you send a 'regular' POST request with the parameters described in 'Query parameters'. To send an image in a message you need to send a POST as multipart/form-data with the attributes from 'Request Body schema'
+      operationId: PostMessages
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              oneOf:
+                - type: object
+                  description: Message
+                  required:
+                    - message
+                  properties:
+                    message:
+                      type: string
+                      description: The message from the user to the accountIt is required to set either message or image
+                    typeId:
+                      type: integer
+                      enum:
+                        - 1
+                        - 4
+                      description: |-
+                        The type of the message. Can be one of the following: <ol>
+                          <li value="1">Message from the user <code>default</code></li>
+                          <li value="4">Automated/system message from the user</li>
+                        </ol>
+                - type: object
+                  description: Image
+                  required:
+                    - image
+                  properties:
+                    image:
+                      type: string
+                      format: binary
+                      description: |-
+                        The image contents. The image should have one of the following mime-types: <ul>
+                          <li>image/jpeg</li>
+                          <li>image/png</li>
+                          <li>image/gif</li>
+                        </ul>
+                    typeId:
+                      type: integer
+                      enum:
+                        - 1
+                        - 4
+                      description: |-
+                        The type of the message. Can be one of the following: <ol>
+                          <li value="1">Message from the user <code>default</code></li>
+                          <li value="4">Automated/system message from the user</li>
+                        </ol>
+            encoding:
+              image:
+                contentType: 'image/jpeg, image/png, image/gif'
+      security:
+        - x-iris-identification: []
+        - x-iris-identification: []
+          authorization: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: The success data
+                        properties:
+                          messageId:
+                            type: string
+                            format: integer
+                            description: The id of the message we just created
+                  - $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                    x-miro: doc/components/schemas/BaseResult.yaml
+                required:
+                  - data
+              examples:
+                success:
+                  summary: post_message
+                  value:
+                    data:
+                      messageId: '10743'
+                    notifications: []
+                    status: SUCCESS
+                    metadata:
+                      values:
+                        url: messages
+                        message: test
+                      method: post
+                      duration: 0.01
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                authentication_required:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_required'
+                  x-miro: doc/components/examples/errors/authorization/authentication_required.yaml
+                authentication_not_valid:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_not_valid'
+                  x-miro: doc/components/examples/errors/authorization/authentication_not_valid.yaml
+                authentication_expired:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_expired'
+                  x-miro: doc/components/examples/errors/authorization/authentication_expired.yaml
+                missing_message_or_image:
+                  summary: missing_message_or_image
+                  value:
+                    notifications:
+                      - type: error
+                        message: missing_message_or_image
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: messages
+                      method: post
+                      duration: 0.01
+                image_too_large:
+                  summary: image_too_large
+                  value:
+                    notifications:
+                      - type: error
+                        message: image_too_large
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: messages
+                      method: post
+                      duration: 0.01
+                image_not_uploaded:
+                  summary: image_not_uploaded
+                  value:
+                    notifications:
+                      - type: error
+                        message: image_not_uploaded
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: messages
+                      method: post
+                      duration: 0.01
+                invalid_image:
+                  summary: invalid_image
+                  value:
+                    notifications:
+                      - type: error
+                        message: invalid_image
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: messages
+                      method: post
+                      duration: 0.01
+                could_not_save_message:
+                  summary: could_not_save_message
+                  value:
+                    notifications:
+                      - type: error
+                        message: could_not_save_message
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: messages
+                      method: post
+                      duration: 0.01
+                invalid_message_type:
+                  summary: invalid_message_type
+                  description: The supplied message type is not one of <ol><li>User message</li><li value='4'>User system message</li></ol>
+                  value:
+                    notifications:
+                      - type: error
+                        message: invalid_message_type
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: messages
+                      method: post
+                      duration: 0.01
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  $ref: '#/paths/~1config/get/responses/401/content/application~1json/examples/error'
+                  x-miro: doc/components/examples/errors/authorization/x-iris-identification.yaml
+  '/messages/{paging}:{id}':
+    get:
+      tags:
+        - Messages
+      summary: Get older/newer messages
+      description: 'Retrieve messages for a particular user by a paginator, defined as ''before:messageID'' or ''after:messagedID''.'
+      operationId: GetMessagesByPaging
+      parameters:
+        - name: paging
+          in: path
+          required: true
+          description: 'The paging endpoint is the easiest when you follow the direction in the `paging` parameter you get returned on each call to get a list of messages (latest & paging). This parameter will describe exactly what you need to use this endpoint.<br> <br> But you can create the paging parameter yourself as well, you can use `before` or `after` to get message before or after a specific message you have retrieved before.'
+          schema:
+            type: string
+            enum:
+              - before
+              - after
+        - name: id
+          in: path
+          required: true
+          description: 'The identifier of the message you want '
+          schema:
+            type: integer
+      security:
+        - x-iris-identification: []
+        - x-iris-identification: []
+          authorization: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/paths/~1messages/get/responses/200/content/application~1json/schema'
+                x-miro: doc/components/schemas/GetMessagesResult.yaml
+              examples:
+                success:
+                  summary: messages_returned
+                  value:
+                    data:
+                      - id: 10737
+                        time: 1536739259
+                        message: hi!
+                        image: null
+                        typeId: 2
+                        agent:
+                          id: '2'
+                          name: Gerben
+                          avatar: 'https://beta.tracebuzz.com/images/avatars/1912991618/6033.jpg'
+                    agent:
+                      id: '2'
+                      name: Gerben
+                      avatar: 'https://beta.tracebuzz.com/images/avatars/1912991618/6033.jpg'
+                      isTyping: 0
+                    paging:
+                      before: '/messages/before:10737'
+                      after: '/messages/after:10737'
+                    notifications: []
+                    status: SUCCESS
+                    metadata:
+                      values:
+                        url: 'messages/after:10736'
+                      method: get
+                      duration: 0.01
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                authentication_required:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_required'
+                  x-miro: doc/components/examples/errors/authorization/authentication_required.yaml
+                authentication_not_valid:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_not_valid'
+                  x-miro: doc/components/examples/errors/authorization/authentication_not_valid.yaml
+                authentication_expired:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_expired'
+                  x-miro: doc/components/examples/errors/authorization/authentication_expired.yaml
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  $ref: '#/paths/~1config/get/responses/401/content/application~1json/examples/error'
+                  x-miro: doc/components/examples/errors/authorization/x-iris-identification.yaml
+  /services/event/startTyping:
+    post:
+      tags:
+        - Events
+      summary: Send StartTyping event
+      description: 'Fires the StartTyping event and pushes data to the service '
+      operationId: PostEventStartTyping
+      security:
+        - x-iris-identification: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/paths/~1services~1event~1stopTyping/post/responses/200/content/application~1json/schema'
+                x-miro: doc/components/schemas/PostEvents.yaml
+              examples:
+                success:
+                  summary: success
+                  value:
+                    data: event startTyping executed
+                    notifications: []
+                    status: SUCCESS
+                    metadata:
+                      values:
+                        url: services/event/startTyping
+                      method: post
+                      duration: 0.01
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  summary: Something went wrong with the event
+                  value:
+                    notifications:
+                      - type: error
+                        message: Something went wrong with the event
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: services/event/startTyping
+                      method: post
+                      duration: 0.01
+                error2:
+                  summary: Could not reach the service
+                  value:
+                    notifications:
+                      - type: error
+                        message: Could not reach the service
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: services/event/startTyping
+                      method: post
+                      duration: 0.01
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  $ref: '#/paths/~1config/get/responses/401/content/application~1json/examples/error'
+                  x-miro: doc/components/examples/errors/authorization/x-iris-identification.yaml
+  /services/event/stopTyping:
+    post:
+      tags:
+        - Events
+      summary: Send StopTyping event
+      description: 'Fires the StopTyping event and pushes data to the service '
+      operationId: PostEventStopTyping
+      security:
+        - x-iris-identification: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: string
+                        description: A message indicating that the event has been executed
+                    required:
+                      - data
+                  - $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                    x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                success:
+                  summary: success
+                  value:
+                    data: event stopTyping executed
+                    notifications: []
+                    status: SUCCESS
+                    metadata:
+                      values:
+                        url: services/event/stopTyping
+                      method: post
+                      duration: 0.01
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  summary: Something went wrong with the event
+                  value:
+                    notifications:
+                      - type: error
+                        message: Something went wrong with the event
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: services/event/stopTyping
+                      method: post
+                      duration: 0.01
+                error2:
+                  summary: Could not reach the service
+                  value:
+                    notifications:
+                      - type: error
+                        message: Could not reach the service
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: services/event/stopTyping
+                      method: post
+                      duration: 0.01
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  $ref: '#/paths/~1config/get/responses/401/content/application~1json/examples/error'
+                  x-miro: doc/components/examples/errors/authorization/x-iris-identification.yaml
+  /config:
+    get:
+      tags:
+        - Config
+      summary: Get Config
+      description: Request the configuration for the identified account.<br /> This contains settings and display settings of the account.<br /> All colors are RGB colors saved in hexadecimals.
+      operationId: GetConfig
+      security:
+        - x-iris-identification: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GetConfigResult/allOf/0/properties/data'
+                        x-miro: doc/components/schemas/Config.yaml
+                    required:
+                      - data
+                  - $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                    x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                success:
+                  summary: success
+                  value:
+                    data:
+                      name: string
+                      telephone: string
+                      font: 0
+                      allowImage: true
+                      backgroundColor: string
+                      backgroundImage: string
+                      iOSStatusBarTextColor: 0
+                      navBackgroundColor: string
+                      navTextColor: string
+                      navHideCloseButton: string
+                      dateColor: string
+                      dateBorder: true
+                      iOSInputContainerBackgroundColor: string
+                      inputFieldBackgroundColor: string
+                      inputFieldTextColor: string
+                      inputFieldPlaceholderColor: string
+                      inputBackgroundColor: string
+                      inputTextColor: string
+                      balloonStyle: 0
+                      userBackgroundColor: string
+                      userTextColor: string
+                      userTextLinkColor: string
+                      userTimeColor: string
+                      userSentColor: string
+                      accountBackgroundColor: string
+                      accountTextColor: string
+                      accountTextLinkColor: string
+                      accountTimeColor: string
+                      infoTextBackgroundColor: string
+                      infoTextBorder: 0
+                      infoTextColor: string
+                      infoText: string
+                      infoText2: string
+                      genericPushMessage: string
+                    notifications: []
+                    status: SUCCESS
+                    metadata:
+                      values:
+                        url: config
+                      method: get
+                      duration: 0.01
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  summary: invalid api key
+                  value:
+                    notifications:
+                      - type: error
+                        message: api_key_not_valid
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: string
+                      method: string
+                      duration: 0.01
+  /devices:
+    post:
+      tags:
+        - Devices
+      summary: Subscribe device
+      description: 'You need to subscribe the device before you can send and get messages.<br /> When you do not subscribe, we can''t tell who you are. It''s that important.<br /> When you subscribe you will also want to setup the pushToken and pushType of your device to receive updates when a new event or message is available for this device.<br /> To make the different push types work for your application, you will need to contact <a href="http://parley.nu/contact" target="_blank">Parley</a> to configure one or multiple pushTypes.'
+      operationId: PostDevices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pushToken:
+                  type: string
+                  description: 'A push token for the device. This is used to send the device a push message when the account respond. Must be unique, if they are re-used they will be deleted from previous device(s).'
+                pushType:
+                  type: integer
+                  minimum: 1
+                  maximum: 6
+                  description: |-
+                    The type of push token. <ol>
+                      <li>Firebase Cloud Messaging (Android) `deprecated`</li>
+                      <li>Apple Push Notification Service `deprecated`</li>
+                      <li>Firebase Cloud Messaging (Web) `deprecated`</li>
+                      <li>Custom webhook</li>
+                      <li>Custom webhook behind OAuth</li>
+                      <li>Firebase Cloud Messaging V1 (Android/Web/iOS)</li>
+                    </ol>
+                pushEnabled:
+                  type: boolean
+                  description: 'When `true` it sends the `content_available: true` key when sending push notifications. When `false` it sends the `content_available: false` key. Default value is `true` when you supply a `pushToken` otherwise it is `false`.'
+                userAdditionalInformation:
+                  type: string
+                  description: 'Additional information for the user as a json encoded string. You can add anything you want, should be in a key value combination and key must be a string. It&#39;s logical to send the name of the authenticated user.                                                          For privacy reasons we want as little information as possible for you to work with. And remember that we can&#39;t verify that wat is sent here is really about the user.'
+                type:
+                  type: integer
+                  minimum: 1
+                  maximum: 4
+                  description: |-
+                    The type of device. <ol>
+                      <li>Android</li>
+                      <li>iOS</li>
+                      <li>Web</li>
+                      <li>Generic (custom build)</li>
+                    </ol>
+                version:
+                  type: string
+                  pattern: '([0-9]{1,2}.[0-9]{1,2}.[0-9]{1,2}|[0-9]{6})'
+                  minLength: 5
+                  maxLength: 8
+                  description: The version number of the client application. Format &quot;1.2.3&quot; or &quot;01.02.03&quot; or &quot;010203&quot; but NOT &quot;123&quot;
+            examples:
+              device:
+                summary: Example devices call
+                description: Example of creating a device with a push token
+                value:
+                  pushToken: 0800fc577294c34e0b28ad2839435945
+                  pushType: '1'
+                  pushEnabled: 'true'
+                  userAdditionalInformation: '{"key":"value"}'
+                  type: '1'
+                  version: 0.0.1
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/paths/~1devices/post/requestBody/content/application~1json/schema'
+              x-miro: doc/components/schemas/requestBodies/Devices.yaml
+            examples:
+              device:
+                summary: Example devices call
+                description: Example of creating a device with a push token
+                value: 'pushToken=0800fc577294c34e0b28ad2839435945&pushType=1&pushEnabled=true&userAdditionalInformation={"key":"value"}&type=1&version=0.0.1'
+      security:
+        - x-iris-identification: []
+        - x-iris-identification: []
+          authorization: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - type: object
+                      properties:
+                        data:
+                          type: object
+                      required:
+                        - data
+                    - $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                      x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                success:
+                  summary: success
+                  value:
+                    data: {}
+                    notifications:
+                      - type: success
+                        message: device_successfully_subscribed
+                    status: SUCCESS
+                    metadata:
+                      values:
+                        url: devices
+                      method: post
+                      duration: 0.01
+                warning:
+                  summary: warning
+                  value:
+                    data: {}
+                    notifications:
+                      - type: warning
+                        message: malformed_userAdditionalInformation
+                      - type: success
+                        message: device_successfully_subscribed
+                    status: SUCCESS
+                    metadata:
+                      values:
+                        url: devices
+                        userAdditionalInformation: 'some additional information: a = b, foo = bar'
+                      method: post
+                      duration: 0.01
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                authentication_required:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_required'
+                  x-miro: doc/components/examples/errors/authorization/authentication_required.yaml
+                authentication_not_valid:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_not_valid'
+                  x-miro: doc/components/examples/errors/authorization/authentication_not_valid.yaml
+                authentication_expired:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_expired'
+                  x-miro: doc/components/examples/errors/authorization/authentication_expired.yaml
+                error:
+                  summary: could_not_subscribe_device
+                  value:
+                    notifications:
+                      - type: error
+                        message: could_not_subscribe_device
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: devices
+                      method: post
+                      duration: 0.01
+                invalid_x:
+                  summary: invalid_x
+                  value:
+                    notifications:
+                      - type: error
+                        message: invalid_version_format
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: devices
+                        version: '123123213'
+                      method: post
+                      duration: 0.01
+                could_not_update_x:
+                  summary: could_not_update_x
+                  value:
+                    notifications:
+                      - type: error
+                        message: could_not_update_pushToken
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: devices
+                        puhsToken: AAAAAAAAAAAAA2342341412
+                      method: post
+                      duration: 0.01
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  $ref: '#/paths/~1config/get/responses/401/content/application~1json/examples/error'
+                  x-miro: doc/components/examples/errors/authorization/x-iris-identification.yaml
+  '/images/{messageID}':
+    get:
+      tags:
+        - Images
+      summary: Retrieve an image
+      description: Retrieve an image from a message
+      operationId: GetImages
+      parameters:
+        - name: messageID
+          in: path
+          required: true
+          description: The ID of the message where the image was sent in
+          schema:
+            type: integer
+      security:
+        - x-iris-identification: []
+          authorization: []
+      responses:
+        '200':
+          description: Success
+          content:
+            image/png:
+              schema:
+                allOf:
+                  - type: string
+                    format: binary
+                    description: The image as binary
+              examples:
+                success:
+                  summary: success
+                  value: '{externalValue}[https://parley.nu/images/logo.png]'
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                authentication_required:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_required'
+                  x-miro: doc/components/examples/errors/authorization/authentication_required.yaml
+                authentication_not_valid:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_not_valid'
+                  x-miro: doc/components/examples/errors/authorization/authentication_not_valid.yaml
+                authentication_expired:
+                  $ref: '#/paths/~1messages/get/responses/400/content/application~1json/examples/authentication_expired'
+                  x-miro: doc/components/examples/errors/authorization/authentication_expired.yaml
+                invalid_message_id:
+                  summary: invalid_message_id
+                  description: The image id is not numeric
+                  value:
+                    notifications:
+                      - type: error
+                        message: invalid_id
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: images/999
+                      method: get
+                      duration: 0.01
+                image_not_found:
+                  summary: image_not_found
+                  description: 'The image is not found, it could be that this image is saved wrong or is corrupted'
+                  value:
+                    notifications:
+                      - type: error
+                        message: image_not_found
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: images/999
+                      method: get
+                      duration: 0.01
+                no_image_in_message:
+                  summary: no_image_in_message
+                  description: The message does not contain an image
+                  value:
+                    notifications:
+                      - type: error
+                        message: no_image_in_message
+                    status: ERROR
+                    metadata:
+                      values:
+                        url: images/999
+                      method: get
+                      duration: 0.01
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResult/allOf/1'
+                x-miro: doc/components/schemas/BaseResult.yaml
+              examples:
+                error:
+                  $ref: '#/paths/~1config/get/responses/401/content/application~1json/examples/error'
+                  x-miro: doc/components/examples/errors/authorization/x-iris-identification.yaml
+components:
+  schemas:
+    BaseResult:
+      description: Object that will always be returned with every call.
+      properties:
+        notifications:
+          type: array
+          description: 'The error or success notifications returned by the api call '
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum:
+                  - success
+                  - warning
+                  - error
+                description: The type of notifications on a success call
+              message:
+                type: string
+                description: The description of what went right or what caused the notification
+            required:
+              - type
+              - message
+        status:
+          type: string
+          enum:
+            - SUCCESS
+            - ERROR
+          description: Indicates if a call succeeded or failed
+        metadata:
+          type: object
+          description: Metadata about the API call as we received it
+          properties:
+            values:
+              type: object
+              description: 'The parameters that you specified in this api call '
+            method:
+              type: string
+              description: 'The HTTP method of this call '
+            duration:
+              type: number
+              format: float
+              description: 'The duration of this call on our servers. '
+          required:
+            - values
+            - method
+            - duration
+      required:
+        - notifications
+        - status
+        - metadata
+    Agent:
+      type: object
+      description: Object that contains information about the agent that has send this message. Is only filled when the message type is 2 or 5.
+      properties:
+        avatar:
+          type: string
+          description: 'The url to the avatar the Agent uses '
+        id:
+          type: integer
+          description: 'The id of the Agent '
+        name:
+          type: string
+          description: 'The name of the Agent '
+      required:
+        - avatar
+        - id
+        - isTyping
+        - name
+    Config:
+      properties:
+        name:
+          type: string
+          description: 'The name of the authenticated application '
+        telephone:
+          type: string
+          description: 'The telephone number of the helpdesk '
+        font:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: |-
+            The font for all the text <ol>
+              <li>San serif</li>
+              <li>Serif</li>
+              <li>Monospace</li>
+              <li>Open Sans</li>
+              <li>PT Sans</li>
+            </ol>
+        allowImage:
+          type: boolean
+          description: 'If it is possible to send images to the api '
+        backgroundColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'The main background color, behind the messages from the user and account. This (and all other colors) is defined as RGB , e.g. FF0000 for bright red'''
+        backgroundImage:
+          type: string
+          description: 'The image used as main background. This overrules the main background color but the color should be used in case this image doesn&#39;t load.'
+        iOSStatusBarTextColor:
+          type: integer
+          minimum: 0
+          maximum: 1
+          description: |-
+            The text color for the status bar in iOs <ol start='0'>
+              <li>White</li>
+              <li>Black</li>
+            </ol>
+        navBackgroundColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'The background color of the main navigation. '
+        navTextColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'The color of the text (and images) used in the main navigation '
+        navHideCloseButton:
+          type: boolean
+          description: 'If the Close / back button must be hidden '
+        dateColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: The color of the date text and border that separates the messages send on different dates.
+        dateBorder:
+          type: boolean
+          description: This indicates whether or not to show a border around the date element in the chat.
+        iOSInputContainerBackgroundColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: The color of the bottom bar on iOS which contains the text field and the send &amp; picture buttons
+        inputFieldBackgroundColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: The background color of the element containing the message that the user is typing/sending.
+        inputFieldTextColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'The color of the text that the user is typing '
+        inputFieldPlaceholderColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'When there is no text in the input field we show a placeholder (type your message..), this is the color of that placeholder. Usually it is a bit of a lighter than the regular text color.'
+        inputBackgroundColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'The background color of the button that sends the typed message, or the color of that button when the button only has 1 color'
+        inputTextColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'The front color of the send button this is usualy an icon on top of the inputBackgroundColor and might nog be used when the send button doesn&#39;t have two color tones.'
+        balloonStyle:
+          type: integer
+          minimum: 1
+          maximum: 2
+          description: This is a choice between the different styles of the balloons containing user or account messages.
+        userBackgroundColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: The background color of the balloon containing a message that the user sends
+        userTextColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'The color of the message that the user sends '
+        userTextLinkColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'When the user sends a link, this is the color it will appear in. '
+        userTimeColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'The color of the time shown in the balloon of a user message '
+        userSentColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: The color of the element that shows if the message is successfully sent (or not)
+        accountBackgroundColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: The background color of the balloon containing a message that the account sends back
+        accountTextColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'The color of the message that the account sends back '
+        accountTextLinkColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: A linked that is shared by the account will highlight in this color to show you can click on it.
+        accountTimeColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: The color of the time shown in the balloon of a message from the account
+        infoTextBackgroundColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: 'The background color of the info messages. This could contain an empty string, to indicate that the background should be transparant.'
+        infoTextBorder:
+          type: integer
+          minimum: 0
+          maximum: 2
+          description: |-
+            This indicates the type of border to show around the infoText element. <ol start='0'>
+              <li>No border</li>
+              <li>Top and bottom border</li>
+              <li>All borders</li>
+            </ol>
+        infoTextColor:
+          type: string
+          format: hexadecimal
+          minLength: 6
+          maxLength: 6
+          description: The color of the info messages that are shown before or between message balloons
+        infoText:
+          type: string
+          description: The welcome text that is shown when a user opens the messages view for the first time. This message wil always be on top of all the messages send between a user and account.
+        infoText2:
+          type: string
+          description: 'The welcome text that is shown when a user opens the messages view for the first time. But the user hasn&#39;t granted push notification rights. It displays instead of infoText'
+        genericPushMessage:
+          type: string
+          description: The generic text that should be used when showing a push notification message
+      required:
+        - name
+        - telephone
+        - font
+        - allowImage
+        - backgroundColor
+        - backgroundImage
+        - iOSStatusBarTextColor
+        - navBackgroundColor
+        - navTextColor
+        - navHideCloseButton
+        - dateColor
+        - dateBorder
+        - iOSInputContainerBackgroundColor
+        - inputFieldBackgroundColor
+        - inputFieldTextColor
+        - inputFieldPlaceholderColor
+        - inputBackgroundColor
+        - inputTextColor
+        - balloonStyle
+        - userBackgroundColor
+        - userTextColor
+        - userTextLinkColor
+        - userTimeColor
+        - userSentColor
+        - accountBackgroundColor
+        - accountTextColor
+        - accountTextLinkColor
+        - accountTimeColor
+        - infoTextBackgroundColor
+        - infoTextBorder
+        - infoTextColor
+        - infoText
+        - infoText2
+        - genericPushMessage
+    GetConfigResult:
+      allOf:
+        - type: object
+          properties:
+            data:
+              properties:
+                name:
+                  type: string
+                  description: 'The name of the authenticated application '
+                telephone:
+                  type: string
+                  description: 'The telephone number of the helpdesk '
+                font:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  description: |-
+                    The font for all the text <ol>
+                      <li>San serif</li>
+                      <li>Serif</li>
+                      <li>Monospace</li>
+                      <li>Open Sans</li>
+                      <li>PT Sans</li>
+                    </ol>
+                allowImage:
+                  type: boolean
+                  description: 'If it is possible to send images to the api '
+                backgroundColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'The main background color, behind the messages from the user and account. This (and all other colors) is defined as RGB , e.g. FF0000 for bright red'''
+                backgroundImage:
+                  type: string
+                  description: 'The image used as main background. This overrules the main background color but the color should be used in case this image doesn&#39;t load.'
+                iOSStatusBarTextColor:
+                  type: integer
+                  minimum: 0
+                  maximum: 1
+                  description: |-
+                    The text color for the status bar in iOs <ol start='0'>
+                      <li>White</li>
+                      <li>Black</li>
+                    </ol>
+                navBackgroundColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'The background color of the main navigation. '
+                navTextColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'The color of the text (and images) used in the main navigation '
+                navHideCloseButton:
+                  type: boolean
+                  description: 'If the Close / back button must be hidden '
+                dateColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: The color of the date text and border that separates the messages send on different dates.
+                dateBorder:
+                  type: boolean
+                  description: This indicates whether or not to show a border around the date element in the chat.
+                iOSInputContainerBackgroundColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: The color of the bottom bar on iOS which contains the text field and the send &amp; picture buttons
+                inputFieldBackgroundColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: The background color of the element containing the message that the user is typing/sending.
+                inputFieldTextColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'The color of the text that the user is typing '
+                inputFieldPlaceholderColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'When there is no text in the input field we show a placeholder (type your message..), this is the color of that placeholder. Usually it is a bit of a lighter than the regular text color.'
+                inputBackgroundColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'The background color of the button that sends the typed message, or the color of that button when the button only has 1 color'
+                inputTextColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'The front color of the send button this is usualy an icon on top of the inputBackgroundColor and might nog be used when the send button doesn&#39;t have two color tones.'
+                balloonStyle:
+                  type: integer
+                  minimum: 1
+                  maximum: 2
+                  description: This is a choice between the different styles of the balloons containing user or account messages.
+                userBackgroundColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: The background color of the balloon containing a message that the user sends
+                userTextColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'The color of the message that the user sends '
+                userTextLinkColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'When the user sends a link, this is the color it will appear in. '
+                userTimeColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'The color of the time shown in the balloon of a user message '
+                userSentColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: The color of the element that shows if the message is successfully sent (or not)
+                accountBackgroundColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: The background color of the balloon containing a message that the account sends back
+                accountTextColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'The color of the message that the account sends back '
+                accountTextLinkColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: A linked that is shared by the account will highlight in this color to show you can click on it.
+                accountTimeColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: The color of the time shown in the balloon of a message from the account
+                infoTextBackgroundColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: 'The background color of the info messages. This could contain an empty string, to indicate that the background should be transparant.'
+                infoTextBorder:
+                  type: integer
+                  minimum: 0
+                  maximum: 2
+                  description: |-
+                    This indicates the type of border to show around the infoText element. <ol start='0'>
+                      <li>No border</li>
+                      <li>Top and bottom border</li>
+                      <li>All borders</li>
+                    </ol>
+                infoTextColor:
+                  type: string
+                  format: hexadecimal
+                  minLength: 6
+                  maxLength: 6
+                  description: The color of the info messages that are shown before or between message balloons
+                infoText:
+                  type: string
+                  description: The welcome text that is shown when a user opens the messages view for the first time. This message wil always be on top of all the messages send between a user and account.
+                infoText2:
+                  type: string
+                  description: 'The welcome text that is shown when a user opens the messages view for the first time. But the user hasn&#39;t granted push notification rights. It displays instead of infoText'
+                genericPushMessage:
+                  type: string
+                  description: The generic text that should be used when showing a push notification message
+              required:
+                - name
+                - telephone
+                - font
+                - allowImage
+                - backgroundColor
+                - backgroundImage
+                - iOSStatusBarTextColor
+                - navBackgroundColor
+                - navTextColor
+                - navHideCloseButton
+                - dateColor
+                - dateBorder
+                - iOSInputContainerBackgroundColor
+                - inputFieldBackgroundColor
+                - inputFieldTextColor
+                - inputFieldPlaceholderColor
+                - inputBackgroundColor
+                - inputTextColor
+                - balloonStyle
+                - userBackgroundColor
+                - userTextColor
+                - userTextLinkColor
+                - userTimeColor
+                - userSentColor
+                - accountBackgroundColor
+                - accountTextColor
+                - accountTextLinkColor
+                - accountTimeColor
+                - infoTextBackgroundColor
+                - infoTextBorder
+                - infoTextColor
+                - infoText
+                - infoText2
+                - genericPushMessage
+          required:
+            - data
+        - description: Object that will always be returned with every call.
+          properties:
+            notifications:
+              type: array
+              description: 'The error or success notifications returned by the api call '
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum:
+                      - success
+                      - warning
+                      - error
+                    description: The type of notifications on a success call
+                  message:
+                    type: string
+                    description: The description of what went right or what caused the notification
+                required:
+                  - type
+                  - message
+            status:
+              type: string
+              enum:
+                - SUCCESS
+                - ERROR
+              description: Indicates if a call succeeded or failed
+            metadata:
+              type: object
+              description: Metadata about the API call as we received it
+              properties:
+                values:
+                  type: object
+                  description: 'The parameters that you specified in this api call '
+                method:
+                  type: string
+                  description: 'The HTTP method of this call '
+                duration:
+                  type: number
+                  format: float
+                  description: 'The duration of this call on our servers. '
+              required:
+                - values
+                - method
+                - duration
+          required:
+            - notifications
+            - status
+            - metadata
+    GetMessageResult:
+      allOf:
+        - type: object
+          properties:
+            data:
+              description: Object that contains all the information about a specific message
+              properties:
+                id:
+                  type: integer
+                  description: The id of the specific message.
+                time:
+                  type: integer
+                  format: Unix Timestamp
+                  description: A Unix Timestamp of the time this message was created
+                message:
+                  type: string
+                  description: The message that is send
+                image:
+                  type: string
+                  description: |-
+                    The url of the image. When an image is send message will always be empty.The image can have one of the following mime-types: <ul>
+                      <li>image/jpeg</li>
+                      <li>image/png</li>
+                      <li>image/gif</li>
+                    </ul> To retrieve an image you need to provide the same headers as you used to retrieve this message.
+                typeId:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  description: |-
+                    The type of the specific message. <ol>
+                      <li>Message from the user</li>
+                      <li>Message from the account</li>
+                      <li>Info message</li>
+                      <li>Automated/system message from the user</li>
+                      <li>Automated/system message from the account</li>
+                    </ol>
+                agent:
+                  $ref: '#/components/schemas/Message/properties/agent'
+                  x-miro: doc/components/schemas/Agent.yaml
+              required:
+                - id
+                - time
+                - typeId
+                - message
+          required:
+            - data
+        - $ref: '#/components/schemas/GetConfigResult/allOf/1'
+          x-miro: doc/components/schemas/BaseResult.yaml
+    GetMessagesResult:
+      allOf:
+        - type: object
+          properties:
+            data:
+              type: array
+              description: The messages for this user
+              items:
+                $ref: '#/components/schemas/GetMessageResult/allOf/0/properties/data'
+                x-miro: doc/components/schemas/Message.yaml
+          required:
+            - data
+        - type: object
+          properties:
+            agent:
+              allOf:
+                - type: object
+                  description: Object that contains information about the agent that is currently handling the conversation
+                  properties:
+                    isTyping:
+                      type: integer
+                      description: 'Timestamp when the agent started typing or 0 if he is not typing '
+                  required:
+                    - isTyping
+                - $ref: '#/components/schemas/Message/properties/agent'
+                  x-miro: doc/components/schemas/Agent.yaml
+          required:
+            - agent
+        - type: object
+          properties:
+            paging:
+              type: object
+              description: A helper to let you determine which paging endpoint to use to 'walk through' all the messages of this user
+              properties:
+                before:
+                  type: string
+                  description: 'The endpoint you need to call to get the previous 50 messages. '
+                after:
+                  type: string
+                  description: The endpoint to call if you want to poll for newer messages since this call
+              required:
+                - before
+                - after
+          required:
+            - paging
+        - type: object
+          properties:
+            stickyMessage:
+              type: string
+              description: 'Contains a Crisis message or OutOfOffice message, if set. Only contains 1 message. The language of the message is automatically chosen by the ''HTTP_ACCEPT_LANGUAGE'' header, if that language is supported. If it is not supported we default to the english language for the message.'
+          required:
+            - stickyMessage
+        - type: object
+          properties:
+            welcomeMessage:
+              type: string
+              description: Contains a welcome message that the client will see at the top of the conversation. (also known as `infoText`)
+          required:
+            - welcomeMessage
+        - $ref: '#/components/schemas/GetConfigResult/allOf/1'
+          x-miro: doc/components/schemas/BaseResult.yaml
+    Message:
+      description: Object that contains all the information about a specific message
+      properties:
+        id:
+          type: integer
+          description: The id of the specific message.
+        time:
+          type: integer
+          format: Unix Timestamp
+          description: A Unix Timestamp of the time this message was created
+        message:
+          type: string
+          description: The message that is send
+        image:
+          type: string
+          description: |-
+            The url of the image. When an image is send message will always be empty.The image can have one of the following mime-types: <ul>
+              <li>image/jpeg</li>
+              <li>image/png</li>
+              <li>image/gif</li>
+            </ul> To retrieve an image you need to provide the same headers as you used to retrieve this message.
+        typeId:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: |-
+            The type of the specific message. <ol>
+              <li>Message from the user</li>
+              <li>Message from the account</li>
+              <li>Info message</li>
+              <li>Automated/system message from the user</li>
+              <li>Automated/system message from the account</li>
+            </ol>
+        agent:
+          type: object
+          description: Object that contains information about the agent that has send this message. Is only filled when the message type is 2 or 5.
+          properties:
+            avatar:
+              type: string
+              description: 'The url to the avatar the Agent uses '
+            id:
+              type: integer
+              description: 'The id of the Agent '
+            name:
+              type: string
+              description: 'The name of the Agent '
+          required:
+            - avatar
+            - id
+            - isTyping
+            - name
+      required:
+        - id
+        - time
+        - typeId
+        - message
+    PostDevicesResult:
+      allOf:
+        - type: object
+          properties:
+            data:
+              type: object
+          required:
+            - data
+        - $ref: '#/components/schemas/GetConfigResult/allOf/1'
+          x-miro: doc/components/schemas/BaseResult.yaml
+    PostMessagesResult:
+      allOf:
+        - type: object
+          properties:
+            data:
+              type: object
+              description: The success data
+              properties:
+                messageId:
+                  type: string
+                  format: integer
+                  description: The id of the message we just created
+        - $ref: '#/components/schemas/GetConfigResult/allOf/1'
+          x-miro: doc/components/schemas/BaseResult.yaml
+      required:
+        - data
+    GetImagesResult:
+      allOf:
+        - type: string
+          format: binary
+          description: The image as binary
+  securitySchemes:
+    authorization:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: 'The authentication of an user in your application. This string needs to be generated in a trusted environment (not inside the app). Documentation about how to generate this string can be found <a href="https://gist.github.com/Gerben-T/36c71faf1879022ac5fa65ccd77b8f75" target="_blank">here.</a>'
+    x-iris-identification:
+      type: apiKey
+      name: x-iris-identification
+      in: header
+      description: 'The identification for an application, identifies which client and device you are. Format <code>[accountId]:[uniqueAppDeviceId]</code>. You get the application id from Parley and you can use/generate your own uniqueAppDeviceId. The latter should be at least 10 characters long. For example you could use the <a href="https://developer.android.com/reference/android/provider/Settings.Secure#ANDROID_ID">ANDROID_ID</a> on android, generate a <a href="https://en.wikipedia.org/wiki/Universally_unique_identifier">UUID</a>, or use similar concepts for the platform you are developing on.'
