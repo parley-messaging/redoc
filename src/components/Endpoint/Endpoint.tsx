@@ -50,7 +50,7 @@ export class Endpoint extends React.Component<EndpointProps, EndpointState> {
     // TODO: highlight server variables, e.g. https://{user}.test.com
     return (
       <OptionsContext.Consumer>
-        {options => (
+        {() => (
           <OperationEndpointWrap>
             <EndpointInfo>
               <HttpVerb type={operation.httpVerb}> {operation.httpVerb}</HttpVerb>{' '}
