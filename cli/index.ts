@@ -267,7 +267,7 @@ async function getPageHTML(
     const specUrl = redocOptions.specUrl || (isURL(pathToSpec) ? pathToSpec : undefined);
     const store = await createStore(spec, specUrl, redocOptions);
     const sheet = new ServerStyleSheet();
-    html = renderToString(sheet.collectStyles(React.createElement(Redoc, { store })));
+    html = renderToString(sheet.collectStyles(React.createElement('Redoc', { store })));
     css = sheet.getStyleTags();
     state = await store.toJS();
 
