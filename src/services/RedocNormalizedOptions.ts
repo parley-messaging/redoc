@@ -36,6 +36,8 @@ export interface RedocRawOptions {
   enumSkipQuotes?: boolean | string;
 
   expandDefaultServerVariables?: boolean;
+
+  tryButtonUrl?: boolean | string;
 }
 
 function argValueToBoolean(val?: string | boolean, defaultValue?: boolean): boolean {
@@ -167,6 +169,8 @@ export class RedocNormalizedOptions {
 
   expandDefaultServerVariables: boolean;
 
+  tryButtonUrl: boolean | string;
+
   constructor(raw: RedocRawOptions, defaults: RedocRawOptions = {}) {
     raw = { ...defaults, ...raw };
     const hook = raw.theme && raw.theme.extensionsHook;
@@ -206,5 +210,6 @@ export class RedocNormalizedOptions {
     this.allowedMdComponents = raw.allowedMdComponents || {};
 
     this.expandDefaultServerVariables = argValueToBoolean(raw.expandDefaultServerVariables);
+    this.tryButtonUrl = argValueToBoolean(raw.tryButtonUrl) ? raw.tryButtonUrl as string : false;
   }
 }
