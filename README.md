@@ -1,3 +1,10 @@
+For Parley, use the following command to build
+```
+yarn install && yarn run bundle:clean && yarn run bundle:standalone
+```
+
+---
+
 <div align="center">
   <img alt="ReDoc logo" src="https://raw.githubusercontent.com/Redocly/redoc/master/docs/images/redoc-logo.png" width="400px" />
 
