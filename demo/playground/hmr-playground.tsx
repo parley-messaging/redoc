@@ -36,7 +36,7 @@ async function init() {
 
 init();
 
-if (module.hot) {
+if ((module as any).hot) {
   const reload = (reloadStore = false) => async () => {
     if (reloadStore) {
       // create a new Store
@@ -49,6 +49,6 @@ if (module.hot) {
     renderRoot({ store });
   };
 
-  module.hot.accept(['../../src/components/Redoc/Redoc'], reload());
-  module.hot.accept(['../../src/services/AppStore'], reload(true));
+  (module as any).hot.accept(['../../src/components/Redoc/Redoc'], reload());
+  (module as any).hot.accept(['../../src/services/AppStore'], reload(true));
 }
