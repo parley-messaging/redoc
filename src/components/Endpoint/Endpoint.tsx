@@ -28,6 +28,8 @@ const TryItWrap = styled.div`
 `;
 
 export class Endpoint extends React.Component<EndpointProps, EndpointState> {
+  static contextType = OptionsContext;
+
   constructor(props) {
     super(props);
     this.state = {
@@ -41,7 +43,8 @@ export class Endpoint extends React.Component<EndpointProps, EndpointState> {
 
   tryItOut = () => {
     const { operation } = this.props;
-    window.open('http://dev.parley.nu/clientApi/latest/doc/custom/api-explorer?scrollTo=page-' + operation.operationId, '_blank');
+    const tryButtonUrl = this.context.tryButtonUrl;
+    window.open(tryButtonUrl + '?scrollTo=page-' + operation.operationId, '_blank');
   };
 
   render() {
@@ -50,16 +53,18 @@ export class Endpoint extends React.Component<EndpointProps, EndpointState> {
     // TODO: highlight server variables, e.g. https://{user}.test.com
     return (
       <OptionsContext.Consumer>
-        {() => (
+        {options => (
           <OperationEndpointWrap>
             <EndpointInfo>
               <HttpVerb type={operation.httpVerb}> {operation.httpVerb}</HttpVerb>{' '}
               <ServerRelativeURL>{operation.path}</ServerRelativeURL>
-              <TryItWrap>
-                <SampleControls>
-                  <span onClick={this.tryItOut}> Try it out </span>
-                </SampleControls>
-              </TryItWrap>
+              {options.tryButtonUrl !== false &&
+                <TryItWrap>
+                  <SampleControls>
+                    <span onClick={this.tryItOut}> Try it out </span>
+                  </SampleControls>
+                </TryItWrap>
+              }
             </EndpointInfo>
           </OperationEndpointWrap>
         )}
