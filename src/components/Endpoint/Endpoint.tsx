@@ -15,6 +15,7 @@ export interface EndpointProps {
 
   hideHostname?: boolean;
   inverted?: boolean;
+  compact?: boolean;
 }
 
 export interface EndpointState {
@@ -55,8 +56,10 @@ export class Endpoint extends React.Component<EndpointProps, EndpointState> {
       <OptionsContext.Consumer>
         {options => (
           <OperationEndpointWrap>
-            <EndpointInfo>
-              <HttpVerb type={operation.httpVerb}> {operation.httpVerb}</HttpVerb>{' '}
+            <EndpointInfo onClick={this.toggle} expanded={expanded} inverted={inverted}>
+              <HttpVerb type={operation.httpVerb} compact={this.props.compact}>
+                {operation.httpVerb}
+              </HttpVerb>
               <ServerRelativeURL>{operation.path}</ServerRelativeURL>
               {options.tryButtonUrl !== false &&
                 <TryItWrap>
@@ -66,6 +69,28 @@ export class Endpoint extends React.Component<EndpointProps, EndpointState> {
                 </TryItWrap>
               }
             </EndpointInfo>
+            <ServersOverlay expanded={expanded} aria-hidden={!expanded}>
+              {operation.servers.map(server => {
+                const normalizedUrl = options.expandDefaultServerVariables
+                  ? expandDefaultServerVariables(server.url, server.variables)
+                  : server.url;
+                return (
+                  <ServerItem key={normalizedUrl}>
+                    <Markdown source={server.description || ''} compact={true} />
+                    <SelectOnClick>
+                      <ServerUrl>
+                        <span>
+                          {hideHostname || options.hideHostname
+                            ? getBasePath(normalizedUrl)
+                            : normalizedUrl}
+                        </span>
+                        {operation.path}
+                      </ServerUrl>
+                    </SelectOnClick>
+                  </ServerItem>
+                );
+              })}
+            </ServersOverlay>
           </OperationEndpointWrap>
         )}
       </OptionsContext.Consumer>
